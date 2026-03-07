@@ -1,58 +1,53 @@
-<x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
-        @csrf
+@extends('layouts.guest')
 
-        <div>
-            <x-input-label for="name" :value="__('Nama Lengkap')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required
-                autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+@section('title', 'Register')
 
-        <div class="mt-4">
-            <x-input-label for="username" :value="__('Username')" />
-            <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" :value="old('username')"
-                required autocomplete="username" />
-            <x-input-error :messages="$errors->get('username')" class="mt-2" />
-        </div>
+@section('content')
+<h5 class="fw-bold mb-3">Daftar Akun</h5>
 
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required
-                autocomplete="email" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+<form method="POST" action="{{ route('register') }}">
+    @csrf
 
-        <div class="mt-4">
-            <x-input-label for="phone" :value="__('Nomor Handphone')" />
-            <x-text-input id="phone" class="block mt-1 w-full" type="text" name="phone" :value="old('phone')" required
-                autocomplete="tel" />
-            <x-input-error :messages="$errors->get('phone')" class="mt-2" />
-        </div>
+    <div class="mb-3">
+        <label for="name" class="form-label">Nama Lengkap</label>
+        <input id="name" type="text" name="name" value="{{ old('name') }}" class="form-control @error('name') is-invalid @enderror" required autofocus autocomplete="name">
+        @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
 
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required
-                autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+    <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input id="username" type="text" name="username" value="{{ old('username') }}" class="form-control @error('username') is-invalid @enderror" required autocomplete="username">
+        @error('username')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
 
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Konfirmasi Password')" />
-            <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password"
-                name="password_confirmation" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control @error('email') is-invalid @enderror" required autocomplete="email">
+        @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                href="{{ route('login') }}">
-                {{ __('Sudah punya akun?') }}
-            </a>
+    <div class="mb-3">
+        <label for="phone" class="form-label">Nomor Handphone</label>
+        <input id="phone" type="text" name="phone" value="{{ old('phone') }}" class="form-control @error('phone') is-invalid @enderror" required autocomplete="tel">
+        @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
 
-            <x-primary-button class="ms-4">
-                {{ __('Daftar') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="new-password">
+        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="mb-3">
+        <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+        <input id="password_confirmation" type="password" name="password_confirmation" class="form-control @error('password_confirmation') is-invalid @enderror" required autocomplete="new-password">
+        @error('password_confirmation')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Daftar</button>
+</form>
+
+<p class="text-center text-muted small mt-3 mb-0">
+    Sudah punya akun? <a href="{{ route('login') }}">Masuk</a>
+</p>
+@endsection

@@ -1,48 +1,43 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+@extends('layouts.guest')
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+@section('title', 'Login')
 
-        <!-- Login Input -->
-        <div>
-            <x-input-label for="login_id" value="Email, Username, atau No. Handphone" />
-            <x-text-input id="login_id" class="block mt-1 w-full" type="text" name="login_id" :value="old('login_id')"
-                required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('login_id')" class="mt-2" />
+@section('content')
+<h5 class="fw-bold mb-3">Masuk Akun</h5>
+
+@if (session('status'))
+    <div class="alert alert-success">{{ session('status') }}</div>
+@endif
+
+<form method="POST" action="{{ route('login') }}">
+    @csrf
+
+    <div class="mb-3">
+        <label for="login_id" class="form-label">Email, Username, atau No. Handphone</label>
+        <input id="login_id" type="text" name="login_id" value="{{ old('login_id') }}" class="form-control @error('login_id') is-invalid @enderror" required autofocus autocomplete="username">
+        @error('login_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="current-password">
+        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="remember" id="remember_me">
+            <label class="form-check-label" for="remember_me">Remember me</label>
         </div>
+        @if (Route::has('password.request'))
+            <a href="{{ route('password.request') }}" class="small">Lupa password?</a>
+        @endif
+    </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+    <button type="submit" class="btn btn-primary w-100">Log in</button>
+</form>
 
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required
-                autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+<p class="text-center text-muted small mt-3 mb-0">
+    Belum punya akun? <a href="{{ route('register') }}">Daftar</a>
+</p>
+@endsection

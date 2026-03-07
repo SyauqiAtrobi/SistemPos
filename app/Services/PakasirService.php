@@ -10,14 +10,13 @@ class PakasirService
     protected $baseUrl;
     protected $project;
     protected $apiKey;
-    protected $isSandbox;
+    // Hapus properti isSandbox dari sini jika tidak dipakai lagi untuk pembuatan transaksi
 
     public function __construct()
     {
         $this->baseUrl = config('pakasir.base_url', 'https://app.pakasir.com');
         $this->project = config('pakasir.project');
         $this->apiKey = config('pakasir.api_key');
-        $this->isSandbox = config('pakasir.is_sandbox', true);
     }
 
     /**
@@ -25,15 +24,17 @@ class PakasirService
      */
     public function createQrisTransaction($orderId, $amount)
     {
-        // Gunakan endpoint simulasi jika mode sandbox (testing) aktif
-        $endpoint = $this->isSandbox 
-            ? '/api/paymentsimulation' 
-            : '/api/transactioncreate/qris';
+        if (blank($this->project) || blank($this->apiKey)) {
+            throw new \Exception('Konfigurasi Pakasir belum lengkap. Isi PAKASIR_PROJECT_SLUG dan PAKASIR_API_KEY pada .env.');
+        }
+
+        // Selalu gunakan endpoint transactioncreate untuk men-generate QRIS
+        $endpoint = '/api/transactioncreate/qris';
 
         $response = Http::post($this->baseUrl . $endpoint, [
             'project'  => $this->project,
             'order_id' => $orderId,
-            'amount'   => (int) $amount, // Pastikan format angka tanpa titik/koma
+            'amount'   => (int) $amount, // Pastikan format angka
             'api_key'  => $this->apiKey,
         ]);
 

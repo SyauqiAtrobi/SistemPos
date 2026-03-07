@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Product;
+use App\Models\Category;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+class ProductController extends Controller
+{
+    /**
+     * Menampilkan halaman utama katalog parfum.
+     */
+    public function index(Request $request)
+    {
+        // 1. Ambil semua data kategori untuk ditampilkan sebagai tombol filter di atas
+        $categories = Category::all();
+
+        // 2. Siapkan query utama untuk mengambil produk
+        // Menggunakan 'with' (Eager Loading) agar relasi kategori ikut ditarik, 
+        // mencegah masalah N+1 Query yang bikin web lambat.
+        $query = Product::with('category');
+
+        // 3. Cek apakah pengguna mengklik tombol filter kategori tertentu (parameter ?category=slug)
+        if ($request->has('category') && $request->category != '') {
+            $categorySlug = $request->category;
+
+            // Filter produk yang memiliki kategori dengan slug yang sesuai
+            $query->whereHas('category', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug);
+            });
+        }
+
+        // 4. Ambil data produk (diurutkan dari yang terbaru ditambahkan)
+        $products = $query->latest()->get();
+
+        // 5. Kirim data ke tampilan (View) katalog.blade.php
+        return view('katalog', compact('categories', 'products'));
+    }
+
+    /**
+     * Menampilkan halaman Manajemen Produk untuk Admin
+     */
+    public function manage()
+    {
+        $products = Product::with('category')->latest()->get();
+        $categories = Category::all();
+
+        return view('productmanagement', compact('products', 'categories'));
+    }
+
+    /**
+     * Menyimpan data produk baru
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $validated['slug'] = Str::slug($validated['name']) . '-' . time();
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        Product::create($validated);
+
+        return back()->with('success', 'Produk berhasil ditambahkan!');
+    }
+
+    /**
+     * Memperbarui data produk
+     */
+    public function update(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        if ($request->name !== $product->name) {
+            $validated['slug'] = Str::slug($validated['name']) . '-' . time();
+        }
+
+        // Hapus gambar lama jika ada gambar baru yang diunggah
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update($validated);
+
+        return back()->with('success', 'Data produk berhasil diperbarui!');
+    }
+
+    /**
+     * Menghapus produk
+     */
+    public function destroy(Product $product)
+    {
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->delete();
+
+        return back()->with('success', 'Produk berhasil dihapus!');
+    }
+}

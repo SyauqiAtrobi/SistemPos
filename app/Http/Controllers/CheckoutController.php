@@ -79,6 +79,6 @@ class CheckoutController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        return view('order.show', compact('order'));
+        return view('ordershow', compact('order'));
     }
 }
