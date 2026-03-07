@@ -1,4 +1,4 @@
-@extends('layouts.role')
+@extends('layouts.publiclayout')
 
 @section('title', 'Pembayaran Invoice')
 
@@ -115,23 +115,27 @@
                                 <p class="text-muted small">Terima kasih atas pesanan Anda.</p>
                             </div>
                         @else
-                            <h5 class="fw-bold mb-2" style="color: var(--primary-blue);">Scan QRIS</h5>
-                            <p class="text-muted small mb-4">Gunakan aplikasi E-Wallet atau M-Banking Anda.</p>
-                            
-                            <div id="qrisContainer" class="qris-wrapper pulse-animation mb-3">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ urlencode($order->payment->qris_string ?? '') }}" 
-                                     alt="QRIS Payment" class="qris-img">
-                            </div>
-                            
-                            <div id="successAnimation" class="success-checkmark">
-                                <i class="fa-solid fa-circle-check"></i>
-                                <h4 class="fw-bold text-success">Pembayaran Berhasil!</h4>
-                                <p class="text-muted small">Terima kasih atas pesanan Anda.</p>
+                            <h5 class="fw-bold mb-2" style="color: var(--primary-blue);">Melanjutkan ke Pembayaran</h5>
+                            <p class="text-muted small mb-4">Anda akan diarahkan ke halaman pembayaran Pakasir untuk menyelesaikan transaksi.</p>
+
+                            @php
+                                $base = config('pakasir.base_url', 'https://app.pakasir.com');
+                                $project = config('pakasir.project');
+                                $amount = $order->total_amount; // sudah dalam integer tanpa pemisah
+                                $redirectBack = urlencode(route('order.show', $order->order_number));
+                                $pakasirUrl = $base . '/pay/' . ($project ?: '') . '/' . $amount . '?order_id=' . $order->order_number . '&redirect=' . $redirectBack;
+                            @endphp
+
+                            <div class="mb-3">
+                                <div class="text-muted small">Jika pengalihan otomatis tidak terjadi, klik tombol berikut:</div>
+                                <div class="mt-2">
+                                    <a id="pakasirOpenBtn" href="{{ $pakasirUrl }}" target="_blank" class="btn btn-custom-primary">Bayar Sekarang</a>
+                                </div>
                             </div>
 
                             <div id="waitingText" class="d-flex align-items-center justify-content-center mt-3 text-muted">
                                 <div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
-                                <small>Menunggu pembayaran otomatis...</small>
+                                <small>Mengarahkan ke Payment Gateway...</small>
                             </div>
                         @endif
                     </div>
@@ -141,8 +145,8 @@
         </div>
 
         <div class="text-center">
-            <a href="{{ url('/katalog') }}" class="btn btn-light rounded-pill px-4 shadow-sm">
-                <i class="fa-solid fa-arrow-left me-2"></i> Kembali ke Katalog
+            <a href="{{ url('/pesanan') }}" class="btn btn-light rounded-pill px-4 shadow-sm">
+                <i class="fa-solid fa-arrow-left me-2"></i> Pesana Saya
             </a>
         </div>
 
@@ -155,58 +159,88 @@
 
 <script type="module">
     document.addEventListener('DOMContentLoaded', function () {
-        
         const orderStatus = '{{ $order->status }}';
         const orderNumber = '{{ $order->order_number }}';
 
-        // Hanya jalankan listener WebSocket jika status masih pending
+        // If pending, redirect to Pakasir immediately (existing behavior)
         if (orderStatus === 'pending') {
-            
-            // Menggunakan Laravel Echo untuk mendengarkan channel OrderPaid
-            // Pastikan Anda sudah menjalankan `npm run dev` dan `php artisan reverb:start`
-            window.Echo.channel(`order.${orderNumber}`)
-                .listen('OrderPaid', (e) => {
-                    console.log('Event Diterima:', e);
+            const pakasirBase = '{{ config('pakasir.base_url', 'https://app.pakasir.com') }}';
+            const pakasirProject = '{{ config('pakasir.project') ?? '' }}';
+            const pakasirAmount = '{{ $order->total_amount }}';
+            const pakasirRedirect = encodeURIComponent('{{ route('order.show', $order->order_number) }}');
+            const pakasirUrl = `${pakasirBase}/pay/${pakasirProject}/${pakasirAmount}?order_id=${orderNumber}&redirect=${pakasirRedirect}`;
 
-                    // 1. Ubah Badge Status
-                    const badge = document.getElementById('orderStatusBadge');
-                    badge.classList.remove('bg-warning', 'text-dark');
-                    badge.classList.add('bg-success');
-                    badge.innerText = 'LUNAS';
-
-                    // 2. Sembunyikan QR Code & Teks Loading
-                    document.getElementById('qrisContainer').style.display = 'none';
-                    document.getElementById('waitingText').style.display = 'none';
-
-                    // 3. Tampilkan Animasi Sukses
-                    const successAnim = document.getElementById('successAnimation');
-                    successAnim.style.display = 'flex';
-                    successAnim.style.animation = 'scaleUp 0.6s ease-out forwards';
-
-                    // 4. Tampilkan Toast Bootstrap (Buat elemen toast secara dinamis)
-                    const toastHTML = `
-                        <div class="toast align-items-center text-bg-success border-0 glass-card" role="alert" aria-live="assertive" aria-atomic="true">
-                            <div class="d-flex">
-                                <div class="toast-body">
-                                    <i class="fa-solid fa-check-double me-2"></i> ${e.message}
-                                </div>
-                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                            </div>
-                        </div>
-                    `;
-                    const toastContainer = document.querySelector('.toast-container');
-                    if (toastContainer) {
-                        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-                        const newToastEl = toastContainer.lastElementChild;
-                        const newToast = new bootstrap.Toast(newToastEl, { delay: 5000 });
-                        newToast.show();
-                    }
-
-                    // Opsional: Mainkan suara notifikasi kecil
-                    // let audio = new Audio('/sounds/success.mp3');
-                    // audio.play();
-                });
+            setTimeout(() => {
+                try { window.location.replace(pakasirUrl); }
+                catch (e) { console.warn('Auto-redirect to Pakasir failed', e); }
+            }, 300);
         }
+
+        // Use WebSocket (Laravel Echo) only — remove polling. Also ensure toast shown only once.
+        let notified = false;
+
+        function handlePaidEvent(message) {
+            if (notified) return; // show only once
+            notified = true;
+
+            const badge = document.getElementById('orderStatusBadge');
+            if (badge) {
+                badge.classList.remove('bg-warning', 'text-dark');
+                badge.classList.add('bg-success');
+                badge.innerText = 'LUNAS';
+            }
+            const qris = document.getElementById('qrisContainer'); if (qris) qris.style.display = 'none';
+            const wait = document.getElementById('waitingText'); if (wait) wait.style.display = 'none';
+            const successAnim = document.getElementById('successAnimation'); if (successAnim) { successAnim.style.display = 'flex'; successAnim.style.animation = 'scaleUp 0.6s ease-out forwards'; }
+
+            const toastHTML = `
+                <div class="toast align-items-center text-bg-success border-0 glass-card" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fa-solid fa-check-double me-2"></i> ${message || 'Pembayaran terdeteksi.'}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            const toastContainer = document.querySelector('.toast-container');
+            if (toastContainer) {
+                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+                const newToastEl = toastContainer.lastElementChild;
+                const newToast = new bootstrap.Toast(newToastEl, { delay: 5000 });
+                newToast.show();
+            }
+        }
+
+        // Single initial status check (one-time) to update UI if already paid, then rely on WebSocket
+        (async function initRealtime() {
+            try {
+                const res = await fetch(`{{ url('/order') }}/${encodeURIComponent(orderNumber)}/status`, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.status && json.status === 'paid') {
+                        handlePaidEvent('Status terkonfirmasi.');
+                        return; // already paid, no need to subscribe
+                    }
+                }
+            } catch (e) {
+                console.warn('Initial status check failed', e);
+            }
+
+            // Subscribe to Echo channel for real-time updates
+            try {
+                if (window.Echo && typeof window.Echo.channel === 'function') {
+                    window.Echo.channel(`order.${orderNumber}`)
+                        .listen('OrderPaid', (e) => {
+                            handlePaidEvent(e.message || null);
+                        });
+                } else {
+                    console.warn('Echo not available - realtime disabled.');
+                }
+            } catch (err) {
+                console.warn('Realtime init failed.', err);
+            }
+        })();
     });
 </script>
 @endpush

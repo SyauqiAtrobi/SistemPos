@@ -10,6 +10,9 @@ use App\Services\PakasirService; // Service yang akan kita buat nanti
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Events\DashboardUpdated;
+use App\Models\Product;
+use App\Models\User;
 
 class CheckoutController extends Controller
 {
@@ -64,6 +67,45 @@ class CheckoutController extends Controller
 
             DB::commit();
 
+            // Broadcast updated dashboard stats
+            try {
+                $totalRevenue = Order::where('status', 'paid')->sum('total_amount');
+                $totalOrders = Order::count();
+                $totalProducts = Product::count();
+                $totalUsers = User::count();
+
+                // simple 7-day series
+                $series = Order::selectRaw("DATE(created_at) as day, SUM(total_amount) as revenue")
+                    ->where('status', 'paid')
+                    ->where('created_at', '>=', now()->subDays(6)->startOfDay())
+                    ->groupBy('day')
+                    ->orderBy('day')
+                    ->get()
+                    ->mapWithKeys(function ($row) {
+                        return [ $row->day => (int) $row->revenue ];
+                    })->toArray();
+
+                $days = [];
+                $values = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $d = now()->subDays($i)->format('Y-m-d');
+                    $days[] = now()->subDays($i)->format('d M');
+                    $values[] = isset($series[$d]) ? (int) $series[$d] : 0;
+                }
+
+                $stats = [
+                    'total_revenue' => (int) $totalRevenue,
+                    'total_orders' => (int) $totalOrders,
+                    'total_products' => (int) $totalProducts,
+                    'total_users' => (int) $totalUsers,
+                    'chart' => ['labels' => $days, 'data' => $values],
+                ];
+
+                event(new DashboardUpdated($stats));
+            } catch (\Throwable $e) {
+                // non-fatal: continue
+            }
+
             // Redirect ke halaman invoice/pembayaran
             return redirect()->route('order.show', $order->order_number);
         } catch (\Exception $e) {
@@ -80,5 +122,21 @@ class CheckoutController extends Controller
             ->firstOrFail();
 
         return view('ordershow', compact('order'));
+    }
+
+    /**
+     * Return JSON status for an order (used by polling fallback).
+     */
+    public function status($orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        return response()->json([
+            'order_number' => $order->order_number,
+            'status' => $order->status,
+            'total_amount' => $order->total_amount,
+        ]);
     }
 }

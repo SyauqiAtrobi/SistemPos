@@ -25,15 +25,40 @@ class CartController extends Controller
             ->where('product_id', $product->id)
             ->first();
 
+        $delta = intval($request->input('qty', 1));
         if ($cart) {
-            // Jika sudah ada, tambah kuantitasnya
-            $cart->increment('qty', $request->input('qty', 1));
+            // If cart exists, increment (delta may be negative)
+            $cart->increment('qty', $delta);
+            $cart->refresh();
         } else {
-            // Jika belum ada, buat baru
-            Cart::create([
+            // If creating with a negative delta, clamp to zero => ignore
+            $initial = $delta > 0 ? $delta : 1;
+            $cart = Cart::create([
                 'user_id' => Auth::id(),
                 'product_id' => $product->id,
-                'qty' => $request->input('qty', 1)
+                'qty' => $initial
+            ]);
+        }
+
+        // If qty drops to zero or below, delete the cart item
+        $deleted = false;
+        if ($cart->qty <= 0) {
+            $cartId = $cart->id;
+            $cart->delete();
+            $deleted = true;
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            $totalQty = Cart::where('user_id', Auth::id())->sum('qty');
+            $totalAmount = Cart::with('product')->where('user_id', Auth::id())->get()->sum(fn($c) => $c->product->price * $c->qty);
+
+            return response()->json([
+                'success' => true,
+                'cart_id' => $deleted ? $cartId ?? null : $cart->id,
+                'qty' => $deleted ? 0 : ($cart->qty ?? 0),
+                'deleted' => $deleted,
+                'totalQty' => $totalQty,
+                'totalAmount' => $totalAmount,
             ]);
         }
 
@@ -46,6 +71,18 @@ class CartController extends Controller
         if ($cart->user_id === Auth::id()) {
             $cart->delete();
         }
+
+        if (request()->wantsJson() || request()->ajax()) {
+            $totalQty = Cart::where('user_id', Auth::id())->sum('qty');
+            $totalAmount = Cart::with('product')->where('user_id', Auth::id())->get()->sum(fn($c) => $c->product->price * $c->qty);
+            return response()->json([
+                'success' => true,
+                'deleted' => true,
+                'totalQty' => $totalQty,
+                'totalAmount' => $totalAmount,
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Item dihapus dari keranjang.');
     }
 }

@@ -33,8 +33,35 @@ class ProductController extends Controller
             });
         }
 
-        // 4. Ambil data produk (diurutkan dari yang terbaru ditambahkan)
+        // 4. Jika ada query pencarian ('q'), filter pada nama/description
+        if ($request->has('q') && trim($request->q) !== '') {
+            $q = trim($request->q);
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%");
+            });
+        }
+
+        // 5. Ambil data produk (diurutkan dari yang terbaru ditambahkan)
         $products = $query->latest()->get();
+
+        // Jika permintaan JSON (AJAX), kembalikan data produk dalam format terstruktur
+        if ($request->wantsJson() || $request->ajax()) {
+            $data = $products->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'slug' => $p->slug,
+                    'price' => $p->price,
+                    'price_text' => 'Rp ' . number_format($p->price, 0, ',', '.'),
+                    'stock' => $p->stock,
+                    'description' => $p->description,
+                    'category' => $p->category?->name,
+                    'image' => $p->image ? asset('storage/'.$p->image) : 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80'
+                ];
+            });
+            return response()->json(['products' => $data]);
+        }
 
         // 5. Kirim data ke tampilan (View) katalog.blade.php
         return view('katalog', compact('categories', 'products'));
