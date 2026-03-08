@@ -153,7 +153,8 @@
                                         'price' => number_format($item->price, 0, ',', '.'),
                                         'subtotal' => number_format($item->price * $item->qty, 0, ',', '.')
                                     ];
-                                })) }}">
+                                })) }}"
+                                data-shipping='@json($o->shipping_address)'>
                             <i class="fa-solid fa-eye"></i>
                         </button>
 
@@ -181,6 +182,70 @@
         </table>
     </div>
 </div>
+    <div class="mt-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <form id="perPageForm" method="GET" class="d-flex align-items-center" style="gap:.75rem;">
+            @foreach(request()->except(['perPage','page']) as $k => $v)
+                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+            @endforeach
+            <label class="small text-glass-blue mb-0">Tampilkan</label>
+            <select name="perPage" class="form-select form-select-sm custom-select-glass" onchange="this.form.submit()" style="width:100px;">
+                @foreach([10,25,50,100] as $opt)
+                    <option value="{{ $opt }}" {{ request('perPage', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                @endforeach
+            </select>
+        </form>
+
+        @php $p = $orders; @endphp
+
+        <div class="d-flex align-items-center justify-content-end gap-3 w-100 w-md-auto">
+            <div class="small text-glass-blue">@if($p->total()) Menampilkan {{ $p->firstItem() }} - {{ $p->lastItem() }} dari {{ $p->total() }} @endif</div>
+
+            @php
+                $last = $p->lastPage();
+                $current = $p->currentPage();
+                $pages = [];
+                if ($last <= 5) {
+                    $pages = range(1, $last);
+                } elseif ($current <= 3) {
+                    $pages = array_merge(range(1,3), [$last-1, $last]);
+                } elseif ($current >= $last - 2) {
+                    $start = max(1, $last - 4);
+                    $pages = range($start, $last);
+                } else {
+                    $pages = [1, $current-1, $current, $current+1, $last];
+                }
+            @endphp
+
+            <nav aria-label="Pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {{ $p->onFirstPage() ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url(1) }}" aria-label="First">&laquo;</a>
+                    </li>
+                    @php $prev = max(1, $current - 1); @endphp
+                    <li class="page-item {{ $current == 1 ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($prev) }}">‹</a>
+                    </li>
+
+                    @php $lastRendered = 0; @endphp
+                    @foreach($pages as $pg)
+                        @if($lastRendered && $pg - $lastRendered > 1)
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        @endif
+                        <li class="page-item {{ $current == $pg ? 'active' : '' }}"><a class="page-link" href="{{ $p->url($pg) }}">{{ $pg }}</a></li>
+                        @php $lastRendered = $pg; @endphp
+                    @endforeach
+
+                    @php $next = min($last, $current + 1); @endphp
+                    <li class="page-item {{ $current == $last ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($next) }}">›</a>
+                    </li>
+                    <li class="page-item {{ $current == $last ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($last) }}" aria-label="Last">&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
 @endsection
 
 @push('modals')
@@ -220,6 +285,18 @@
                         <strong id="modalDate" class="text-dark"></strong>
                     </div>
                 </div>
+                
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <small class="text-glass-blue d-block fw-medium">Tujuan Pengiriman</small>
+                            <div id="modalShipping" class="p-3 modal-info-box mt-2">
+                                <div><strong id="modalShipLabel" class="text-dark"></strong></div>
+                                <div id="modalShipAddress" class="text-glass-blue small"></div>
+                                <div class="mt-1"><small class="text-glass-blue">No. HP: <span id="modalShipPhone"></span></small></div>
+                                <div class="mt-1"><small class="text-glass-blue">Koordinat: <span id="modalShipCoords"></span></small></div>
+                            </div>
+                        </div>
+                    </div>
 
                 <h6 class="fw-bold mb-3 text-gradient-blue">
                     <i class="fa-solid fa-box-open me-2"></i> Item yang Dibeli
@@ -307,6 +384,38 @@
 
         const fulfillSelect = document.getElementById('modalFulfillmentSelect');
         if (fulfillSelect) fulfillSelect.value = btn.getAttribute('data-fulfillment') || '';
+
+        // Shipping address
+        try {
+            const shippingRaw = btn.getAttribute('data-shipping');
+            const ship = shippingRaw ? JSON.parse(shippingRaw) : null;
+            const shipLabelEl = document.getElementById('modalShipLabel');
+            const shipAddrEl = document.getElementById('modalShipAddress');
+            const shipPhoneEl = document.getElementById('modalShipPhone');
+            const shipCoordsEl = document.getElementById('modalShipCoords');
+
+            if (ship) {
+                shipLabelEl.innerText = ship.label || '';
+                let addrHtml = ship.address || '';
+                if (ship.city) addrHtml += (addrHtml ? '<br>' : '') + ship.city;
+                if (ship.postal_code) addrHtml += (addrHtml ? ' - ' : '') + ship.postal_code;
+                shipAddrEl.innerHTML = addrHtml;
+                shipPhoneEl.innerText = ship.phone || '';
+                if (ship.lat && ship.lng) {
+                    const lat = ship.lat; const lng = ship.lng;
+                    shipCoordsEl.innerHTML = `<a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank">${lat},${lng}</a>`;
+                } else {
+                    shipCoordsEl.innerText = '';
+                }
+            } else {
+                shipLabelEl.innerText = '';
+                shipAddrEl.innerText = 'Tidak ada data alamat pengiriman.';
+                shipPhoneEl.innerText = '';
+                shipCoordsEl.innerText = '';
+            }
+        } catch (e) {
+            console.error('Failed to parse shipping data', e);
+        }
 
         const saveBtn = document.getElementById('saveFulfillmentBtn');
         if (saveBtn) saveBtn.setAttribute('data-order-id', btn.getAttribute('data-id'));

@@ -146,6 +146,70 @@
         </table>
     </div>
 </div>
+    <div class="mt-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <form id="perPageForm" method="GET" class="d-flex align-items-center" style="gap:.75rem;">
+            @foreach(request()->except(['perPage','page']) as $k => $v)
+                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+            @endforeach
+            <label class="small text-glass-blue mb-0">Tampilkan</label>
+            <select name="perPage" class="form-select form-select-sm custom-select-glass" onchange="this.form.submit()" style="width:100px;">
+                @foreach([10,25,50,100] as $opt)
+                    <option value="{{ $opt }}" {{ request('perPage', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                @endforeach
+            </select>
+        </form>
+
+        @php $p = $categories; @endphp
+
+        <div class="d-flex align-items-center justify-content-end gap-3 w-100 w-md-auto">
+            <div class="small text-glass-blue">@if($p->total()) Menampilkan {{ $p->firstItem() }} - {{ $p->lastItem() }} dari {{ $p->total() }} @endif</div>
+
+            @php
+                $last = $p->lastPage();
+                $current = $p->currentPage();
+                $pages = [];
+                if ($last <= 5) {
+                    $pages = range(1, $last);
+                } elseif ($current <= 3) {
+                    $pages = array_merge(range(1,3), [$last-1, $last]);
+                } elseif ($current >= $last - 2) {
+                    $start = max(1, $last - 4);
+                    $pages = range($start, $last);
+                } else {
+                    $pages = [1, $current-1, $current, $current+1, $last];
+                }
+            @endphp
+
+            <nav aria-label="Pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {{ $p->onFirstPage() ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url(1) }}" aria-label="First">&laquo;</a>
+                    </li>
+                    @php $prev = max(1, $current - 1); @endphp
+                    <li class="page-item {{ $current == 1 ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($prev) }}">‹</a>
+                    </li>
+
+                    @php $lastRendered = 0; @endphp
+                    @foreach($pages as $pg)
+                        @if($lastRendered && $pg - $lastRendered > 1)
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        @endif
+                        <li class="page-item {{ $current == $pg ? 'active' : '' }}"><a class="page-link" href="{{ $p->url($pg) }}">{{ $pg }}</a></li>
+                        @php $lastRendered = $pg; @endphp
+                    @endforeach
+
+                    @php $next = min($last, $current + 1); @endphp
+                    <li class="page-item {{ $current == $last ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($next) }}">›</a>
+                    </li>
+                    <li class="page-item {{ $current == $last ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $p->url($last) }}" aria-label="Last">&raquo;</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
 @endsection
 
 @push('modals')

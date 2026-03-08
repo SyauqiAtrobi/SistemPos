@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('order_number')->unique();
             $table->integer('total_amount');
             $table->enum('status', ['pending', 'paid', 'failed', 'cancelled'])->default('pending');
+            $table->string('fulfillment_status')->nullable();
+            $table->unsignedBigInteger('address_id')->nullable();
+            $table->json('shipping_address')->nullable();
             $table->timestamps();
         });
     }

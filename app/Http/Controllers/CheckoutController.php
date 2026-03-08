@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use App\Events\DashboardUpdated;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Address;
 
 class CheckoutController extends Controller
 {
@@ -31,12 +32,77 @@ class CheckoutController extends Controller
         DB::beginTransaction();
         try {
             // 1. Buat Data Order
-            $order = Order::create([
-                'user_id' => $user->id,
-                'order_number' => $orderNumber,
-                'total_amount' => $totalAmount,
-                'status' => 'pending'
-            ]);
+                // Resolve shipping address: either selected address_id, provided address data, or user's main address
+                $addressIdToSave = null;
+                $shippingAddress = null;
+
+                if ($request->filled('address_id')) {
+                    $addr = Address::where('id', $request->input('address_id'))->where('user_id', $user->id)->firstOrFail();
+                    $addressIdToSave = $addr->id;
+                    $shippingAddress = [
+                        'label' => $addr->label,
+                        'address' => $addr->address,
+                        'city' => $addr->city,
+                        'postal_code' => $addr->postal_code,
+                        'phone' => $addr->phone,
+                        'lat' => $addr->lat,
+                        'lng' => $addr->lng,
+                    ];
+                } elseif ($request->filled('address')) {
+                    $count = $user->addresses()->count();
+                    if ($count >= 3) {
+                        throw new \Exception('Anda sudah memiliki 3 alamat. Hapus salah satu atau pilih alamat lain.');
+                    }
+
+                    $data = $request->validate([
+                        'label' => 'nullable|string|max:100',
+                        'address' => 'required|string',
+                        'city' => 'nullable|string',
+                        'postal_code' => 'nullable|string',
+                        'phone' => 'nullable|string',
+                        'lat' => 'nullable|numeric',
+                        'lng' => 'nullable|numeric',
+                    ]);
+
+                    $created = $user->addresses()->create($data);
+                    $addressIdToSave = $created->id;
+                    $shippingAddress = [
+                        'label' => $created->label,
+                        'address' => $created->address,
+                        'city' => $created->city,
+                        'postal_code' => $created->postal_code,
+                        'phone' => $created->phone,
+                        'lat' => $created->lat,
+                        'lng' => $created->lng,
+                    ];
+                } else {
+                    // Fallback: use user's primary saved address if any
+                    $primary = $user->addresses()->orderByDesc('is_primary')->first();
+                    if ($primary) {
+                        $addressIdToSave = $primary->id;
+                        $shippingAddress = [
+                            'label' => $primary->label,
+                            'address' => $primary->address,
+                            'city' => $primary->city,
+                            'postal_code' => $primary->postal_code,
+                            'phone' => $primary->phone,
+                            'lat' => $primary->lat,
+                            'lng' => $primary->lng,
+                        ];
+                    } else {
+                        throw new \Exception('Silakan pilih atau masukkan alamat pengiriman.');
+                    }
+                }
+
+                $order = Order::create([
+                    'user_id' => $user->id,
+                    'order_number' => $orderNumber,
+                    'total_amount' => $totalAmount,
+                    'status' => 'pending',
+                    'fulfillment_status' => 'dikemas',
+                    'address_id' => $addressIdToSave,
+                    'shipping_address' => $shippingAddress,
+                ]);
 
             // 2. Pindahkan Cart ke Order Items
             foreach ($carts as $cart) {

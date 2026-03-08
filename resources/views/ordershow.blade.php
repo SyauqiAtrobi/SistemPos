@@ -158,6 +158,24 @@
 @vite(['resources/js/app.js'])
 
 <script type="module">
+                    @if($order->shipping_address)
+                    <div class="mt-4 p-3 rounded-3" style="background-color: var(--soft-white);">
+                        <h6 class="fw-bold">Alamat Pengiriman</h6>
+                        @php
+                            $sa = $order->shipping_address;
+                            if(is_string($sa)) { $sa = json_decode($sa, true); }
+                        @endphp
+                        <p class="mb-1">{{ $sa['label'] ?? '-' }}</p>
+                        <p class="mb-1">{{ $sa['address'] ?? '-' }} {{ $sa['city'] ?? '' }} {{ $sa['postal_code'] ?? '' }}</p>
+                        <p class="mb-1">Tel: {{ $sa['phone'] ?? '-' }}</p>
+                        @if(!empty($sa['lat']) && !empty($sa['lng']))
+                            <p class="mb-0">
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ $sa['lat'] }},{{ $sa['lng'] }}" target="_blank" class="btn btn-outline-primary btn-sm">Lihat Lokasi</a>
+                                <small class="text-muted ms-2">Koordinat: {{ $sa['lat'] }}, {{ $sa['lng'] }}</small>
+                            </p>
+                        @endif
+                    </div>
+                    @endif
     document.addEventListener('DOMContentLoaded', function () {
         const orderStatus = '{{ $order->status }}';
         const orderNumber = '{{ $order->order_number }}';

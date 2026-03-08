@@ -11,10 +11,13 @@ class CategoryController extends Controller
     /**
      * Menampilkan halaman Manajemen Kategori
      */
-    public function manage()
+    public function manage(Request $request)
     {
+        $perPage = (int) $request->query('perPage', 10);
+        if (!in_array($perPage, [10,25,50,100])) $perPage = 10;
+
         // Menggunakan withCount('products') untuk menghitung jumlah parfum di tiap kategori
-        $categories = Category::withCount('products')->latest()->get();
+        $categories = Category::withCount('products')->latest()->paginate($perPage)->withQueryString();
         
         return view('categorymanagement', compact('categories'));
     }

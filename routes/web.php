@@ -46,6 +46,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Admin profile
     Route::get('/admin/profile', [App\Http\Controllers\AdminProfileController::class, 'show'])->name('admin.profile.show');
     Route::put('/admin/profile', [App\Http\Controllers\AdminProfileController::class, 'update'])->name('admin.profile.update');
+    
+    // Settings management (.env) - admin only
+    Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
+    Route::delete('/settings/logo', [App\Http\Controllers\SettingsController::class, 'deleteLogo'])->name('settings.logo.destroy');
 });
 
 // 3. Rute yang membutuhkan Login
@@ -70,6 +75,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
     Route::delete('/cart/remove/{cart}', [CartController::class, 'remove'])->name('cart.remove');
+
+    // Alamat pengguna (maks 3)
+    Route::get('/addresses', [App\Http\Controllers\AddressesController::class, 'index'])->name('addresses.index');
+    Route::post('/addresses', [App\Http\Controllers\AddressesController::class, 'store'])->name('addresses.store');
+    Route::patch('/addresses/{address}', [App\Http\Controllers\AddressesController::class, 'update'])->name('addresses.update');
+    Route::delete('/addresses/{address}', [App\Http\Controllers\AddressesController::class, 'destroy'])->name('addresses.destroy');
 
     // Fitur Checkout & Invoice
     Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');

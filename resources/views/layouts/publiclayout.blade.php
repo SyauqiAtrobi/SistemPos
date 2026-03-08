@@ -4,7 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Baba Parfum Depok - @yield('title', 'Katalog')</title>
+    @php
+        $appName = config('app.name') ?: env('APP_NAME', 'BabaPOS');
+        $appLogo = env('APP_LOGO', '');
+    @endphp
+    @if(!empty($appLogo))
+        <link rel="icon" href="{{ $appLogo }}">
+        <link rel="apple-touch-icon" href="{{ $appLogo }}">
+    @endif
+    <title>{{ $appName }} - @yield('title', 'Katalog')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -160,6 +168,53 @@
             font-weight: 600;
         }
 
+        /* --- Custom Positioning untuk Dropup Mobile (Menu Akun Saya) --- */
+        .bottom-nav .dropup .dropdown-menu {
+            bottom: 100% !important; /* Memaksa menu melayang di atas bottom bar */
+            top: auto !important;
+            margin-bottom: 20px !important; /* Memberi jarak agar tidak menempel ke bar */
+            right: 15px !important;
+            left: auto !important;
+            border-radius: 16px;
+            transform-origin: bottom right;
+            animation: dropupAnim 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        /* Make icons inline and same size as text in bottom-nav dropdown items */
+        .bottom-nav .dropdown-menu .dropdown-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        .bottom-nav .dropdown-menu .dropdown-item i {
+            font-size: 1rem;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        /* Hover Effect untuk Menu Item Dropup */
+        .bottom-nav .dropdown-menu .dropdown-item {
+            transition: all 0.2s;
+            font-size: 0.7rem;
+        }
+        .bottom-nav .dropdown-menu .dropdown-item:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: #0056b3 !important;
+        }
+        .bottom-nav .dropdown-menu .text-danger:hover {
+            background-color: rgba(220, 53, 69, 0.1) !important;
+            color: #dc3545 !important;
+        }
+
+        @keyframes dropupAnim {
+            from { opacity: 0; transform: translateY(15px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         /* --- RESPONSIVITAS KHUSUS --- */
         @media (max-width: 991.98px) {
             /* Beri jarak bawah agar konten tidak tertutup Bottom Nav di Mobile */
@@ -196,8 +251,11 @@
     <nav class="navbar glass-nav sticky-top shadow-sm py-2 py-lg-3">
         <div class="container-fluid px-3 px-lg-4 d-flex justify-content-between align-items-center">
             
-            <a class="navbar-brand fw-bold text-gradient-blue m-0 fs-4" href="{{ route('katalog.index') }}">
-                BabaPOS
+            <a class="navbar-brand fw-bold text-gradient-blue m-0 fs-4 d-flex align-items-center" href="{{ route('katalog.index') }}">
+                @if(!empty($appLogo))
+                    <img src="{{ $appLogo }}" alt="{{ $appName }}" style="height:34px; object-fit:contain; margin-right:10px;">
+                @endif
+                <span>{{ $appName }}</span>
             </a>
 
             <div class="d-flex align-items-center gap-3 gap-lg-4">
@@ -219,10 +277,6 @@
                     <i class="fa-solid fa-magnifying-glass fs-5"></i>
                 </a>
                 @endif
-
-                <a href="#" class="text-primary position-relative text-decoration-none">
-                    <i class="fa-regular fa-comment-dots fs-5"></i>
-                </a>
 
                 @if(!request()->routeIs('cart.*') && !request()->routeIs('orders.index'))
                 <a href="{{ route('cart.index') }}" id="cartIcon" class="text-primary position-relative text-decoration-none me-1 d-none d-lg-inline-block">
@@ -286,10 +340,39 @@
         </a>
 
         @if(Auth::check())
-            <a href="#" id="mobileAccountBtn" class="bottom-nav-item {{ request()->routeIs('profile.*') ? 'active' : '' }}">
-                <i class="fa-regular fa-user"></i>
-                <span>Akun Saya</span>
-            </a>
+            <div class="bottom-nav-item dropup d-flex flex-column align-items-center justify-content-end" style="flex: 1;">
+                
+                <a href="#" class="text-decoration-none w-100 {{ request()->routeIs('profile.*') || request()->routeIs('orders.*') ? 'active' : '' }}" 
+                   data-bs-toggle="dropdown" 
+                   data-bs-display="static" 
+                   aria-expanded="false" 
+                   style="color: inherit; outline: none;">
+                    <i class="fa-regular fa-user"></i>
+                    <span style="display: block; margin-top: 4px;">Akun Saya</span>
+                </a>
+                
+                <ul class="dropdown-menu dropdown-menu-end glass-card border-0 shadow-lg p-2" style="min-width: 190px;">
+                    
+                    @if(Auth::user()->role === 'admin')
+                        <li><a class="dropdown-item py-2 rounded-3 text-glass-blue fw-medium" href="{{ route('dashboard') }}"><i class="fa-solid fa-gauge-high me-2 text-primary"></i>Dashboard Admin</a></li>
+                    @endif
+                    
+                    <li><a class="dropdown-item py-2 rounded-3 text-glass-blue fw-medium" href="{{ route('orders.index') }}"><i class="fa-solid fa-receipt me-2 text-primary"></i>Pesanan Saya</a></li>
+                    
+                    <li><a class="dropdown-item py-2 rounded-3 text-glass-blue fw-medium" href="{{ route('profile.edit') }}"><i class="fa-solid fa-user-pen me-2 text-primary"></i>Pengaturan Akun</a></li>
+                    
+                    <li><hr class="dropdown-divider opacity-10 my-1"></li>
+                    
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="dropdown-item py-2 rounded-3 text-danger fw-bold border-0 bg-transparent w-100 text-start">
+                                <i class="fa-solid fa-right-from-bracket me-2"></i>Keluar
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
         @else
             <a href="{{ route('login') }}" class="bottom-nav-item">
                 <i class="fa-solid fa-arrow-right-to-bracket"></i>
@@ -298,35 +381,13 @@
         @endif
     </div>
 
-    <!-- Floating mobile search overlay (hidden by default) -->
     <div id="mobileSearchOverlay" style="display:none; position:fixed; inset:12px; z-index:1060;">
         <div class="card glass-card p-3 h-100 overflow-auto" style="border-radius:12px;">
             <div class="d-flex gap-2 mb-2 align-items-center">
-                <input id="mobileSearchInput" type="search" class="form-control rounded-pill" placeholder="Cari parfum...">
-                <button id="mobileSearchClose" class="btn btn-light"><i class="fa-solid fa-times"></i></button>
+                <input id="mobileSearchInput" type="search" class="form-control rounded-pill custom-input-glass" placeholder="Cari parfum...">
+                <button id="mobileSearchClose" class="btn btn-light rounded-pill"><i class="fa-solid fa-times"></i></button>
             </div>
             <div id="mobileSearchResults" class="row row-cols-1 g-3" style="min-height:60px;"></div>
-        </div>
-    </div>
-
-    <!-- Mobile Account Menu Modal -->
-    <div class="modal fade" id="mobileAccountMenu" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm modal-dialog-bottom">
-            <div class="modal-content glass-card border-0">
-                <div class="modal-header border-0 pb-0">
-                    <h6 class="modal-title fw-bold">Akun Saya</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="list-group">
-                        <a href="{{ route('orders.index') }}" class="list-group-item list-group-item-action">Pesanan Saya</a>
-                        <a href="{{ route('profile.edit') }}" class="list-group-item list-group-item-action">Akun</a>
-                        <form method="POST" action="{{ route('logout') }}">@csrf
-                            <button type="submit" class="list-group-item list-group-item-action text-danger">Keluar</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -338,7 +399,6 @@
     <x-confirm-modal />
     @stack('modals')
 
-    <!-- Guest Cart Modal (rendered for both guests and auth; guests will see localStorage contents) -->
     <div class="modal fade" id="guestCartModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content glass-card border-0">
@@ -351,7 +411,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">Catatan: Anda dapat menambahkan barang sebagai tamu. Login diperlukan saat checkout.</small>
                         <div>
-                            <a href="{{ route('login') }}" id="guestCheckoutBtn" class="btn btn-custom-primary">Login untuk Checkout</a>
+                            <a href="{{ route('login') }}" id="guestCheckoutBtn" class="btn btn-custom-primary rounded-pill">Login untuk Checkout</a>
                         </div>
                     </div>
                 </div>
@@ -384,7 +444,9 @@
                 if (totalQty > 0) {
                     if (!guestBadge) {
                         guestBadge = document.createElement('span');
-                        guestBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm guest-cart-badge';
+                        guestBadge.className = 'position-absolute start-100 translate-middle badge rounded-pill bg-danger shadow-sm guest-cart-badge';
+                        guestBadge.style.top = '0';
+                        if(targetEl === bottomCart) { guestBadge.style.left = '60%'; }
                         guestBadge.style.fontSize = '0.65rem';
                         guestBadge.style.padding = '0.25em 0.5em';
                         targetEl.appendChild(guestBadge);
@@ -424,20 +486,20 @@
             for (const it of guestCart) {
                 totalQty += parseInt(it.qty || 0);
                 const el = document.createElement('div');
-                el.className = 'list-group-item d-flex gap-3 align-items-start';
+                el.className = 'list-group-item d-flex gap-3 align-items-start border-0 bg-transparent px-0 py-3 border-bottom';
 
                 const img = document.createElement('img');
                 img.src = it.img || 'https://via.placeholder.com/80';
-                img.className = 'rounded-3';
-                img.style.width = '80px';
-                img.style.height = '80px';
+                img.className = 'rounded-3 shadow-sm';
+                img.style.width = '70px';
+                img.style.height = '70px';
                 img.style.objectFit = 'cover';
 
                 const content = document.createElement('div');
                 content.className = 'flex-fill';
 
                 const title = document.createElement('div');
-                title.className = 'fw-bold text-truncate';
+                title.className = 'fw-bold text-truncate text-primary';
                 title.textContent = it.name || 'Produk';
 
                 const price = document.createElement('div');
@@ -447,43 +509,20 @@
                 const descContainer = document.createElement('div');
                 descContainer.className = 'text-muted small';
                 const fullDesc = (it.desc || '').trim();
-                const maxLen = 120;
-                if (fullDesc.length > maxLen) {
-                    descContainer.textContent = fullDesc.slice(0, maxLen) + '...';
-                    const toggleBtn = document.createElement('button');
-                    toggleBtn.type = 'button';
-                    toggleBtn.className = 'btn btn-link btn-sm p-0 ms-2';
-                    toggleBtn.textContent = 'Tampilkan semua';
-                    toggleBtn.addEventListener('click', function () {
-                        if (toggleBtn.textContent === 'Tampilkan semua') {
-                            descContainer.textContent = fullDesc;
-                            toggleBtn.textContent = 'Tampilkan sebagian';
-                        } else {
-                            descContainer.textContent = fullDesc.slice(0, maxLen) + '...';
-                            toggleBtn.textContent = 'Tampilkan semua';
-                        }
-                    });
-                    const descWrap = document.createElement('div');
-                    descWrap.appendChild(descContainer);
-                    descWrap.appendChild(toggleBtn);
-                    content.appendChild(title);
-                    content.appendChild(price);
-                    content.appendChild(descWrap);
-                } else {
-                    descContainer.textContent = fullDesc || '';
-                    content.appendChild(title);
-                    content.appendChild(price);
-                    content.appendChild(descContainer);
-                }
+                descContainer.textContent = fullDesc;
+                
+                content.appendChild(title);
+                content.appendChild(price);
+                content.appendChild(descContainer);
 
                 const qtyDiv = document.createElement('div');
                 qtyDiv.className = 'text-end d-flex flex-column align-items-end';
 
                 const qtyLabel = document.createElement('div');
-                qtyLabel.className = 'fw-semibold mb-2';
+                qtyLabel.className = 'fw-semibold mb-2 text-primary';
                 qtyLabel.textContent = 'Qty: ';
                 const qtyValue = document.createElement('span');
-                qtyValue.className = 'badge bg-light text-dark';
+                qtyValue.className = 'badge bg-light text-dark border';
                 qtyValue.style.minWidth = '38px';
                 qtyValue.style.display = 'inline-block';
                 qtyValue.style.textAlign = 'center';
@@ -521,14 +560,12 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             const cartIcon = document.getElementById('cartIcon');
-            if (!cartIcon) return;
 
             // Show guest badge if not authenticated
             if (!isAuthenticatedClient) {
                 const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
                 const totalQty = guestCart.reduce((s,i)=>s + (parseInt(i.qty)||0), 0);
 
-                // remove server badge if present (server shows 0 for guests)
                 const serverBadge = cartIcon ? cartIcon.querySelector('.server-cart-badge') : null;
                 if (serverBadge) serverBadge.remove();
                 const bottomCart = document.getElementById('bottomCartIcon');
@@ -539,11 +576,9 @@
                     updateGuestBadge();
                 }
 
-                // intercept click to show guest cart modal instead of redirecting to protected page
                 [cartIcon, bottomCart].forEach(function(el) {
                     if (!el) return;
                     el.addEventListener('click', function (e) {
-                        const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
                         if (!isAuthenticatedClient) {
                             e.preventDefault();
                             renderGuestCartModal();
@@ -553,7 +588,8 @@
                     });
                 });
             }
-            // Mobile search handling: show floating overlay and perform AJAX search
+            
+            // Mobile search handling
             const mobileSearchBtn = document.querySelector('.d-lg-none .fa-magnifying-glass') ? document.querySelector('.d-lg-none .fa-magnifying-glass').closest('a') : null;
             const overlay = document.getElementById('mobileSearchOverlay');
             const input = document.getElementById('mobileSearchInput');
@@ -570,15 +606,15 @@
                     const col = document.createElement('div');
                     col.className = 'col';
                     col.innerHTML = `
-                        <div class="d-flex gap-3 align-items-start">
-                            <img src="${p.image}" style="width:84px;height:84px;object-fit:cover;border-radius:10px;"/>
+                        <div class="d-flex gap-3 align-items-start glass-card p-2 border-0 shadow-sm mb-2">
+                            <img src="${p.image}" style="width:70px;height:70px;object-fit:cover;border-radius:10px;"/>
                             <div class="flex-fill">
-                                <div class="fw-bold text-truncate">${p.name}</div>
-                                <div class="small text-muted">${p.category || ''}</div>
-                                <div class="fw-semibold text-gradient-blue mt-1">${p.price_text}</div>
+                                <div class="fw-bold text-truncate text-primary" style="font-size:0.95rem;">${p.name}</div>
+                                <div class="small text-muted mb-1">${p.category || ''}</div>
+                                <div class="fw-semibold text-dark">${p.price_text}</div>
                             </div>
-                            <div class="text-end">
-                                <a href="/cart/add/${p.id}" class="btn btn-sm btn-custom-primary">Tambah</a>
+                            <div class="text-end align-self-center">
+                                <a href="/cart/add/${p.id}" class="btn btn-sm btn-custom-primary rounded-pill"><i class="fa-solid fa-plus"></i></a>
                             </div>
                         </div>
                     `;
@@ -603,7 +639,7 @@
                     overlay.style.display = 'block';
                     input.focus();
                     input.value = '';
-                    results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari...</div>';
+                    results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari parfum...</div>';
                 });
 
                 closeBtn.addEventListener('click', function () { overlay.style.display = 'none'; });
@@ -612,40 +648,27 @@
                     const q = input.value.trim();
                     if (searchTimer) clearTimeout(searchTimer);
                     if (q.length < 1) {
-                        results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari...</div>';
+                        results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari parfum...</div>';
                         return;
                     }
                     searchTimer = setTimeout(() => doMobileSearch(q), 300);
                 });
             }
-
-            // Mobile account menu trigger
-            const mobileAccountBtn = document.getElementById('mobileAccountBtn');
-            if (mobileAccountBtn) {
-                mobileAccountBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    var modal = new bootstrap.Modal(document.getElementById('mobileAccountMenu'));
-                    modal.show();
-                });
-            }
-
-            // Orders page mobile search toggle
+            
             const ordersMobileSearchToggle = document.getElementById('ordersMobileSearchToggle');
             if (ordersMobileSearchToggle) {
                 ordersMobileSearchToggle.addEventListener('click', function (e) {
                     e.preventDefault();
-                    // reuse mobile search overlay but focus the input
                     overlay.style.display = 'block';
                     input.focus();
                     input.value = '';
-                    results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari...</div>';
+                    results.innerHTML = '<div class="col-12 text-center text-muted py-3">Ketik untuk mencari produk pesanan...</div>';
                 });
             }
         });
     </script>
     
     <script>
-        // Inisialisasi Toast Global
         document.addEventListener('DOMContentLoaded', function () {
             var toastElList = [].slice.call(document.querySelectorAll('.toast'))
             var toastList = toastElList.map(function (toastEl) {
@@ -654,7 +677,6 @@
             toastList.forEach(toast => toast.show());
         });
 
-        // Fungsi Global untuk Custom Confirm Modal
         function showConfirmModal(title, message, confirmCallback) {
             document.getElementById('customModalTitle').innerText = title;
             document.getElementById('customModalBody').innerText = message;

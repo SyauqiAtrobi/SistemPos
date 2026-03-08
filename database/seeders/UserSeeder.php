@@ -19,7 +19,6 @@ class UserSeeder extends Seeder
                 'username' => 'admin',
                 'phone' => '081111111111',
                 'role' => 'admin',
-                'address' => 'Kantor Baba Parfum Depok',
                 'email_verified_at' => now(),
                 'password' => 'admin',
             ]
@@ -32,7 +31,6 @@ class UserSeeder extends Seeder
                 'username' => 'customer',
                 'phone' => '082222222222',
                 'role' => 'customer',
-                'address' => 'Depok, Jawa Barat',
                 'email_verified_at' => now(),
                 'password' => 'customer',
             ]

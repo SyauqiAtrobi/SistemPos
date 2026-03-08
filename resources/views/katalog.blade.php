@@ -185,7 +185,7 @@
         <div class="card h-100 glass-card border-0 d-flex flex-column">
             
             <div class="img-wrapper">
-                <img src="{{ $product->image ? asset('storage/'.$product->image) : 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80' }}" 
+                <img src="{{ $product->image ? asset('storage/'.$product->image) : 'https://placehold.co/400' }}" 
                      class="card-img-top product-img" alt="{{ $product->name }}">
             </div>
             
@@ -220,7 +220,7 @@
                                 data-price="Rp {{ number_format($product->price, 0, ',', '.') }}"
                                 data-stock="{{ $product->stock }}"
                                 data-desc="{{ $product->description }}"
-                                data-img="{{ $product->image ? asset('storage/'.$product->image) : 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80' }}">
+                                data-img="{{ $product->image ? asset('storage/'.$product->image) : 'https://placehold.co/400' }}">
                             <i class="fa-solid fa-cart-plus me-1"></i> Tambah
                         </button>
                     @else

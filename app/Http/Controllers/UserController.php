@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function manage()
+    public function manage(Request $request)
     {
-        $users = User::latest()->get();
+        $perPage = (int) $request->query('perPage', 10);
+        if (!in_array($perPage, [10,25,50,100])) $perPage = 10;
+
+        $users = User::latest()->paginate($perPage)->withQueryString();
         return view('usermanagement', compact('users'));
     }
 

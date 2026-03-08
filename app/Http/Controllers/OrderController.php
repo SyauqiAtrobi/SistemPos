@@ -14,11 +14,14 @@ class OrderController extends Controller
     /**
      * Menampilkan halaman Manajemen Pesanan untuk Admin
      */
-    public function manage()
+    public function manage(Request $request)
     {
+        $perPage = (int) $request->query('perPage', 10);
+        if (!in_array($perPage, [10,25,50,100])) $perPage = 10;
+
         // Ambil semua pesanan, muat relasi pelanggan dan produk di dalamnya.
         // Diurutkan dari yang terbaru (latest).
-        $orders = Order::with(['user', 'items.product'])->latest()->get();
+        $orders = Order::with(['user', 'items.product'])->latest()->paginate($perPage)->withQueryString();
         
         return view('ordermanagement', compact('orders'));
     }

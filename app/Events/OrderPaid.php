@@ -42,7 +42,7 @@ class OrderPaid implements ShouldBroadcastNow
         return [
             'order_number' => $this->order->order_number,
             'status' => $this->order->status,
-            'message' => 'Pembayaran berhasil! Terima kasih telah berbelanja di Baba Parfum Depok.'
+            'message' => 'Pembayaran berhasil! Terima kasih telah berbelanja di ' . config('app.name') . '.'
         ];
     }
 }

@@ -139,14 +139,7 @@
                         @error('phone')<div class="text-danger small mt-1 ms-1">{{ $message }}</div>@enderror
                     </div>
 
-                    <div class="mb-4">
-                        <label class="form-label small fw-semibold text-secondary ms-1" for="address">Alamat</label>
-                        <div class="input-group custom-input-group @error('address') border-danger @enderror">
-                            <span class="input-group-text"><i class="fa-solid fa-location-dot"></i></span>
-                            <input id="address" name="address" type="text" value="{{ old('address', $user->address) }}" class="form-control" autocomplete="street-address">
-                        </div>
-                        @error('address')<div class="text-danger small mt-1 ms-1">{{ $message }}</div>@enderror
-                    </div>
+                    <!-- Address moved to 'Alamat Saya' section below; user.address column migrated -->
 
                     <div class="d-flex align-items-center gap-3 mt-4">
                         <button type="submit" class="btn btn-custom-primary rounded-pill px-4 shadow-sm">
@@ -164,6 +157,64 @@
     </div>
 
     <div class="col-12 col-lg-8">
+            <div class="glass-card p-4 p-md-5 border-0 shadow-sm mb-4" style="animation-delay: 0.05s;">
+                <section>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-3" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-location-dot fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-gradient-blue mb-0">Alamat Saya</h5>
+                            <p class="text-glass-blue small mb-0">Kelola hingga 3 alamat pengiriman Anda.</p>
+                        </div>
+                    </div>
+
+                    <hr class="opacity-10 mb-3">
+
+                    <div id="addressesListProfile">
+                        @if($user->addresses && $user->addresses->count())
+                            @foreach($user->addresses as $addr)
+                                <div class="d-flex align-items-start justify-content-between mb-3 p-3 modal-info-box rounded-3">
+                                    <div>
+                                        <div class="fw-bold">{{ $addr->label ?? 'Alamat' }}</div>
+                                        <div class="small text-glass-blue">{{ $addr->address }}{{ $addr->city ? ', ' . $addr->city : '' }}{{ $addr->postal_code ? ' - ' . $addr->postal_code : '' }}</div>
+                                        <div class="small text-glass-blue mt-1">No. HP: {{ $addr->phone }}</div>
+                                        @if($addr->lat && $addr->lng)
+                                            <div class="small text-glass-blue mt-1">Koordinat: <a href="https://www.google.com/maps/search/?api=1&query={{ $addr->lat }},{{ $addr->lng }}" target="_blank">{{ $addr->lat }},{{ $addr->lng }}</a></div>
+                                        @endif
+                                    </div>
+                                    <div class="ms-3 text-end">
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary editAddressBtn" 
+                                                data-id="{{ $addr->id }}"
+                                                data-label="{{ $addr->label }}"
+                                                data-address="{{ $addr->address }}"
+                                                data-city="{{ $addr->city }}"
+                                                data-postal_code="{{ $addr->postal_code }}"
+                                                data-phone="{{ $addr->phone }}"
+                                                data-lat="{{ $addr->lat }}"
+                                                data-lng="{{ $addr->lng }}"
+                                            >Edit</button>
+                                            <form method="POST" action="{{ route('addresses.destroy', $addr->id) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-glass-danger">Hapus</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="text-glass-blue small p-3">Belum ada alamat tersimpan.</div>
+                        @endif
+                    </div>
+
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-outline-primary rounded-pill px-4" id="addAddressBtn">Tambah Alamat Baru</button>
+                    </div>
+                </section>
+            </div>
+
         <div class="glass-card p-4 p-md-5 border-0 shadow-sm" style="animation-delay: 0.1s;">
             <section>
                 <div class="d-flex align-items-center mb-2">
@@ -309,6 +360,68 @@
 </div>
 @endpush
 
+@push('modals')
+<!-- Add Address Modal -->
+<div class="modal fade" id="addressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-card border-0 shadow-lg">
+            <form id="addressForm" method="POST" action="{{ route('addresses.store') }}">
+                @csrf
+                <input type="hidden" name="_method" id="addr_form_method" value="POST">
+                <div class="modal-header border-0 pb-0 align-items-center mt-2 mx-2">
+                    <h5 class="modal-title fw-bold text-gradient-blue mb-0" id="addressModalTitle">Tambah Alamat Baru</h5>
+                    <button type="button" class="btn-close opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-4 px-4 ms-2">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold ms-1">Label (opsional)</label>
+                        <input type="text" name="label" id="addr_label" class="form-control custom-input-group">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold ms-1">Alamat Lengkap</label>
+                        <textarea name="address" id="addr_address" class="form-control custom-input-group" rows="2"></textarea>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold ms-1">Kota</label>
+                            <input type="text" name="city" id="addr_city" class="form-control custom-input-group">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold ms-1">Kode Pos</label>
+                            <input type="text" name="postal_code" id="addr_postal" class="form-control custom-input-group">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold ms-1">No. HP</label>
+                        <input type="text" name="phone" id="addr_phone" class="form-control custom-input-group">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold ms-1">Koordinat</label>
+                        <div class="input-group">
+                            <input type="text" id="addr_coords_display" class="form-control" placeholder="lat,lng" disabled>
+                            <button type="button" class="btn btn-outline-secondary" id="openAddrPicker">Pick Lokasi</button>
+                        </div>
+                        <input type="hidden" name="lat" id="addr_lat">
+                        <input type="hidden" name="lng" id="addr_lng">
+                    </div>
+
+                    <div class="mt-3">
+                        <x-location-picker />
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2 pb-4 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-glass-cancel rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-custom-primary rounded-pill px-4" id="addrFormSaveBtn">Simpan Alamat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endpush
+
 @push('scripts')
 <script>
     // Script untuk Toggle Lihat/Sembunyikan Password
@@ -336,5 +449,88 @@
             deleteModal.show();
         });
     @endif
+</script>
+@endpush
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addAddressBtn = document.getElementById('addAddressBtn');
+        const addAddrModalEl = document.getElementById('addAddressModal');
+        if (addAddressBtn && addAddrModalEl) {
+            addAddressBtn.addEventListener('click', function () {
+                // open modal for adding
+                const modalEl = document.getElementById('addressModal');
+                const modal = new bootstrap.Modal(modalEl);
+                // reset form
+                const form = document.getElementById('addressForm');
+                form.reset();
+                document.getElementById('addr_form_method').value = 'POST';
+                form.action = '{{ route('addresses.store') }}';
+                document.getElementById('addressModalTitle').innerText = 'Tambah Alamat Baru';
+                modal.show();
+            });
+        }
+
+        // Wire up location picker: copy lp-lat/lng into hidden fields and display
+        const openAddrPicker = document.getElementById('openAddrPicker');
+        if (openAddrPicker) {
+            openAddrPicker.addEventListener('click', function () {
+                // ensure map visible; LocationPicker initializes on modal show
+                const el = document.querySelector('#addAddressModal .location-picker');
+                if (!el) {
+                    // If component is present in page (it is), just focus
+                }
+                // Scroll to map area
+                const mapEl = document.querySelector('#addressModal #lp-map');
+                if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+
+        // When location picker marker changes, the component already writes to #lp-lat/#lp-lng
+        // Copy them into modal hidden inputs when the form is submitted
+        const addressForm = document.getElementById('addressForm');
+        if (addressForm) {
+            addressForm.addEventListener('submit', function (e) {
+                const lpLat = document.getElementById('lp-lat') ? document.getElementById('lp-lat').value : '';
+                const lpLng = document.getElementById('lp-lng') ? document.getElementById('lp-lng').value : '';
+                if (lpLat && lpLng) {
+                    document.getElementById('addr_lat').value = lpLat;
+                    document.getElementById('addr_lng').value = lpLng;
+                    const display = document.getElementById('addr_coords_display');
+                    if (display) display.value = lpLat + ',' + lpLng;
+                }
+                // let the form submit normally
+            });
+        }
+
+        // Edit address handlers (reuse same modal)
+        document.querySelectorAll('.editAddressBtn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.id;
+                const modalEl = document.getElementById('addressModal');
+                const modal = new bootstrap.Modal(modalEl);
+                const form = document.getElementById('addressForm');
+                // populate fields
+                document.getElementById('addr_label').value = this.dataset.label || '';
+                document.getElementById('addr_address').value = this.dataset.address || '';
+                document.getElementById('addr_city').value = this.dataset.city || '';
+                document.getElementById('addr_postal').value = this.dataset.postal_code || '';
+                document.getElementById('addr_phone').value = this.dataset.phone || '';
+                document.getElementById('addr_lat').value = this.dataset.lat || '';
+                document.getElementById('addr_lng').value = this.dataset.lng || '';
+                const display = document.getElementById('addr_coords_display');
+                if (display) display.value = (this.dataset.lat && this.dataset.lng) ? (this.dataset.lat + ',' + this.dataset.lng) : '';
+                // set form action to update
+                form.action = '{{ url('/addresses') }}' + '/' + id;
+                document.getElementById('addr_form_method').value = 'PATCH';
+                document.getElementById('addressModalTitle').innerText = 'Edit Alamat';
+                modal.show();
+                // scroll to map if available
+                const mapEl = document.querySelector('#addressModal #lp-map');
+                if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+    });
 </script>
 @endpush

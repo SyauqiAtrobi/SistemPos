@@ -7,7 +7,6 @@
     .auth-wrapper {
         max-width: 450px;
         margin: 0 auto;
-        padding: 2rem 1rem;
     }
     .custom-input-group {
         background: rgba(255, 255, 255, 0.6);

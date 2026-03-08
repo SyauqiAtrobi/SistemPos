@@ -5,7 +5,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Baba Parfum Depok - @yield('title', 'Dashboard')</title>
+    @php
+        $appName = config('app.name') ?: env('APP_NAME', 'BabaPOS');
+        $appLogo = env('APP_LOGO', '');
+    @endphp
+    @if(!empty($appLogo))
+        <link rel="icon" href="{{ $appLogo }}">
+        <link rel="apple-touch-icon" href="{{ $appLogo }}">
+    @endif
+    <title>{{ $appName }} - @yield('title', 'Dashboard')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -250,123 +258,106 @@
 <body>
 
     @php
-        $cartCount = Auth::user()->role === 'customer'
-            ? \App\Models\Cart::where('user_id', Auth::id())->sum('qty')
-            : 0;
-        $cartBadge = $cartCount > 99 ? '99+' : $cartCount;
+        $cartCount = 0;
+        $cartBadge = '0';
     @endphp
 
+    @php
+        $appName = config('app.name') ?: env('APP_NAME', 'BabaPOS');
+        $appLogo = env('APP_LOGO', '');
+    @endphp
     <div class="role-mobile-topbar d-lg-none glass-nav sticky-top shadow-sm">
         <div class="container-fluid py-3 d-flex justify-content-between align-items-center">
             <button class="btn btn-outline-primary btn-sm rounded-pill px-3" type="button" data-bs-toggle="offcanvas"
                 data-bs-target="#roleSidebarMobile">
-                <i class="fa-solid fa-bars-staggered me-1"></i> Menu
+                <i class="fa-solid fa-bars me-1"></i>
             </button>
-            <a class="fw-bold fs-5 text-gradient-blue text-decoration-none mx-auto"
-                href="{{ Auth::user()->role === 'admin' ? route('dashboard') : route('katalog.index') }}">
-                BabaPOS
+            <a class="fw-bold fs-5 text-gradient-blue text-decoration-none mx-auto d-flex align-items-center"
+                href="{{ route('dashboard') }}">
+                <span>{{ $appName }}</span>
             </a>
-            <a class="text-primary text-decoration-none" href="{{ route('profile.edit') }}">
+            <a class="text-primary text-decoration-none" href="{{ route('admin.profile.show') }}">
                 <i class="fa-regular fa-circle-user fs-4"></i>
             </a>
         </div>
     </div>
 
-    @if(Auth::user()->role === 'admin')
-        <aside class="role-sidebar d-none d-lg-flex flex-column">
-            <div class="role-sidebar-brand px-4 py-4 d-flex align-items-center justify-content-between mb-2">
-                <a class="fw-bold fs-4 text-decoration-none text-gradient-blue d-flex align-items-center"
-                    href="{{ Auth::user()->role === 'admin' ? route('dashboard') : route('katalog.index') }}">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-2"
-                        style="width: 36px; height: 36px;">
-                        <i class="fa-solid fa-store fs-6"></i>
-                    </div>
-                    <span class="sidebar-label">BabaPOS</span>
-                </a>
-                <button type="button" class="role-sidebar-toggle" id="roleSidebarToggle" aria-label="Toggle sidebar">
-                    <i class="fa-solid fa-angles-left"></i>
-                </button>
-            </div>
+    <aside class="role-sidebar d-none d-lg-flex flex-column">
+        <div class="role-sidebar-brand px-4 py-4 d-flex align-items-center justify-content-between mb-2">
+            <a class="fw-bold fs-4 text-decoration-none text-gradient-blue d-flex align-items-center"
+                href="{{ route('dashboard') }}">
+                <span class="sidebar-label">{{ $appName }}</span>
+            </a>
+            <button type="button" class="role-sidebar-toggle" id="roleSidebarToggle" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-angles-left"></i>
+            </button>
+        </div>
 
-            <div class="px-3 pb-3 flex-grow-1 overflow-y-auto" style="scrollbar-width: thin;">
-                @if(Auth::user()->role === 'admin')
-                    <div class="sidebar-label text-glass-blue small fw-bold mb-2 px-2 ms-1 mt-2 text-uppercase"
-                        style="letter-spacing: 1px;">Main Menu</div>
-                    <a class="role-sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                        href="{{ route('dashboard') }}">
-                        <i class="fa-solid fa-chart-pie me-2"></i><span class="sidebar-label">Dashboard</span>
-                    </a>
-                    <a class="role-sidebar-link {{ request()->routeIs('product.*') ? 'active' : '' }}"
-                        href="{{ route('product.manage') }}">
-                        <i class="fa-solid fa-boxes-stacked me-2"></i><span class="sidebar-label">Produk</span>
-                    </a>
-                    <a class="role-sidebar-link {{ request()->routeIs('category.*') ? 'active' : '' }}"
-                        href="{{ route('category.manage') }}">
-                        <i class="fa-solid fa-tags me-2"></i><span class="sidebar-label">Kategori</span>
-                    </a>
-                    <a class="role-sidebar-link {{ request()->routeIs('order.manage') ? 'active' : '' }}"
-                        href="{{ route('order.manage') }}">
-                        <i class="fa-solid fa-file-invoice-dollar me-2"></i><span class="sidebar-label">Pesanan</span>
-                    </a>
-                        <a class="role-sidebar-link {{ request()->routeIs('user.manage') ? 'active' : '' }}" href="{{ route('user.manage') }}">
-                            <i class="fa-solid fa-users me-2"></i><span class="sidebar-label">Pengguna</span>
-                        </a>
-                @else
-                    <div class="sidebar-label text-glass-blue small fw-bold mb-2 px-2 ms-1 mt-2 text-uppercase"
-                        style="letter-spacing: 1px;">Toko</div>
-                    <a class="role-sidebar-link {{ request()->routeIs('katalog.index') ? 'active' : '' }}"
-                        href="{{ route('katalog.index') }}">
-                        <i class="fa-solid fa-store me-2"></i><span class="sidebar-label">Katalog</span>
-                    </a>
-                    <a class="role-sidebar-link position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}"
-                        href="{{ route('cart.index') }}">
-                        <i class="fa-solid fa-cart-shopping me-2"></i><span class="sidebar-label">Keranjang</span>
-                        @if($cartCount > 0)
-                            <span
-                                class="position-absolute top-50 end-0 translate-middle-y badge rounded-pill bg-danger me-2 shadow-sm">{{ $cartBadge }}</span>
-                        @endif
-                    </a>
-                @endif
+        <div class="px-3 pb-3 flex-grow-1 overflow-y-auto" style="scrollbar-width: thin;">
+            <div class="sidebar-label text-glass-blue small fw-bold mb-2 px-2 ms-1 mt-2 text-uppercase"
+                style="letter-spacing: 1px;">Main Menu</div>
+            <a class="role-sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                href="{{ route('dashboard') }}">
+                <i class="fa-solid fa-chart-pie me-2"></i><span class="sidebar-label">Dashboard</span>
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('product.*') ? 'active' : '' }}"
+                href="{{ route('product.manage') }}">
+                <i class="fa-solid fa-boxes-stacked me-2"></i><span class="sidebar-label">Produk</span>
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('category.*') ? 'active' : '' }}"
+                href="{{ route('category.manage') }}">
+                <i class="fa-solid fa-tags me-2"></i><span class="sidebar-label">Kategori</span>
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('order.manage') ? 'active' : '' }}"
+                href="{{ route('order.manage') }}">
+                <i class="fa-solid fa-file-invoice-dollar me-2"></i><span class="sidebar-label">Pesanan</span>
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('user.manage') ? 'active' : '' }}"
+                href="{{ route('user.manage') }}">
+                <i class="fa-solid fa-users me-2"></i><span class="sidebar-label">Pengguna</span>
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
+                href="{{ route('settings.index') }}">
+                <i class="fa-solid fa-gear me-2"></i><span class="sidebar-label">Setting</span>
+            </a>
 
-                <div class="sidebar-label text-glass-blue small fw-bold mb-2 px-2 ms-1 mt-4 text-uppercase"
-                    style="letter-spacing: 1px;">Akun</div>
-                @if(Auth::user()->role === 'admin')
-                    <a class="role-sidebar-link {{ request()->routeIs('admin.profile.show') ? 'active' : '' }}" href="{{ route('admin.profile.show') }}">
-                        <i class="fa-regular fa-id-badge me-2"></i><span class="sidebar-label">Profil Admin</span>
-                    </a>
-                @else
-                    <a class="role-sidebar-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
-                        <i class="fa-regular fa-id-badge me-2"></i><span class="sidebar-label">Profile</span>
-                    </a>
-                @endif
-            </div>
+            <div class="sidebar-label text-glass-blue small fw-bold mb-2 px-2 ms-1 mt-4 text-uppercase"
+                style="letter-spacing: 1px;">Akun</div>
+            <a class="role-sidebar-link {{ request()->routeIs('admin.profile.show') ? 'active' : '' }}"
+                href="{{ route('admin.profile.show') }}">
+                <i class="fa-regular fa-id-badge me-2"></i><span class="sidebar-label">Profil Admin</span>
+            </a>
+        </div>
 
-            <div class="px-4 py-4 border-top border-light" style="background: rgba(0, 86, 179, 0.02);">
-                <div class="d-flex align-items-center mb-3 sidebar-label">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-2 shadow-sm"
-                        style="width: 35px; height: 35px;">
-                        {{ substr(Auth::user()->name, 0, 1) }}
-                    </div>
-                    <div>
-                        <div class="role-user-name fw-bold text-dark lh-1" style="font-size: 0.9rem;">
-                            {{ Auth::user()->name }}
-                        </div>
-                        <small class="text-glass-blue lh-1">{{ ucfirst(Auth::user()->role) }}</small>
-                    </div>
+        <div class="px-4 py-4 border-top border-light" style="background: rgba(0, 86, 179, 0.02);">
+            <div class="d-flex align-items-center mb-3 sidebar-label">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-2 shadow-sm"
+                    style="width: 35px; height: 35px;">
+                    {{ substr(Auth::user()->name, 0, 1) }}
                 </div>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit"
-                        class="btn btn-glass-logout btn-sm w-100 py-2 d-flex align-items-center justify-content-center">
-                        <i class="fa-solid fa-right-from-bracket me-2"></i><span class="role-logout-label">Log Out</span>
-                    </button>
-                </form>
+                <div>
+                    <div class="role-user-name fw-bold text-dark lh-1" style="font-size: 0.9rem;">
+                        {{ Auth::user()->name }}
+                    </div>
+                    <small class="text-glass-blue lh-1">{{ ucfirst(Auth::user()->role) }}</small>
+                </div>
             </div>
-        </aside>
-    @endif
+            <a href="{{ route('katalog.index') }}"
+                class="btn btn-outline-primary w-100 mb-2 d-flex align-items-center justify-content-center">
+                <i class="fa-solid fa-chevron-left me-2"></i> Katalog
+            </a>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="btn btn-glass-logout btn-sm w-100 py-2 d-flex align-items-center justify-content-center">
+                    <i class="fa-solid fa-right-from-bracket me-2"></i><span class="role-logout-label">Log Out</span>
+                </button>
+            </form>
+        </div>
+    </aside>
 
-    <div class="offcanvas offcanvas-start glass-offcanvas {{ Auth::user()->role === 'admin' ? 'admin-offcanvas' : '' }}"
-        tabindex="-1" id="roleSidebarMobile" aria-labelledby="roleSidebarMobileLabel">
+    <div class="offcanvas offcanvas-start glass-offcanvas admin-offcanvas" tabindex="-1" id="roleSidebarMobile"
+        aria-labelledby="roleSidebarMobileLabel">
         <div class="offcanvas-header border-bottom border-light pb-3 pt-4">
             <h5 class="offcanvas-title fw-bold text-gradient-blue d-flex align-items-center"
                 id="roleSidebarMobileLabel">
@@ -374,63 +365,41 @@
                     style="width: 36px; height: 36px;">
                     <i class="fa-solid fa-store fs-6"></i>
                 </div>
-                BabaPOS
+                {{ $appName }}
             </h5>
             <button type="button" class="btn-close opacity-75" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
 
         <div class="offcanvas-body d-flex flex-column px-3 pt-4">
-            @if(Auth::user()->role === 'admin')
-                <div class="text-glass-blue small fw-bold mb-2 px-2 text-uppercase" style="letter-spacing: 1px;">Main Menu
-                </div>
-                <a class="role-sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                    href="{{ route('dashboard') }}">
-                    <i class="fa-solid fa-chart-pie me-2"></i>Dashboard
-                </a>
-                <a class="role-sidebar-link {{ request()->routeIs('product.*') ? 'active' : '' }}"
-                    href="{{ route('product.manage') }}">
-                    <i class="fa-solid fa-boxes-stacked me-2"></i>Produk
-                </a>
-                <a class="role-sidebar-link {{ request()->routeIs('category.*') ? 'active' : '' }}"
-                    href="{{ route('category.manage') }}">
-                    <i class="fa-solid fa-tags me-2"></i>Kategori
-                </a>
-                <a class="role-sidebar-link {{ request()->routeIs('order.manage') ? 'active' : '' }}"
-                    href="{{ route('order.manage') }}">
-                    <i class="fa-solid fa-file-invoice-dollar me-2"></i>Pesanan
-                </a>
-                <a class="role-sidebar-link {{ request()->routeIs('user.manage') ? 'active' : '' }}"
-                    href="{{ route('user.manage') }}">
-                    <i class="fa-solid fa-users me-2"></i>Pengguna
-                </a>
-            @else
-                <a class="role-sidebar-link {{ request()->routeIs('katalog.index') ? 'active' : '' }}"
-                    href="{{ route('katalog.index') }}">
-                    <i class="fa-solid fa-store me-2"></i>Katalog
-                </a>
-                <a class="role-sidebar-link position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}"
-                    href="{{ route('cart.index') }}">
-                    <i class="fa-solid fa-cart-shopping me-2"></i>Keranjang
-                    @if($cartCount > 0)
-                        <span
-                            class="position-absolute top-50 end-3 translate-middle-y badge rounded-pill bg-danger shadow-sm">{{ $cartBadge }}</span>
-                    @endif
-                </a>
-            @endif
+            <div class="text-glass-blue small fw-bold mb-2 px-2 text-uppercase" style="letter-spacing: 1px;">Main Menu
+            </div>
+            <a class="role-sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                href="{{ route('dashboard') }}">
+                <i class="fa-solid fa-chart-pie me-2"></i>Dashboard
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('product.*') ? 'active' : '' }}"
+                href="{{ route('product.manage') }}">
+                <i class="fa-solid fa-boxes-stacked me-2"></i>Produk
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('category.*') ? 'active' : '' }}"
+                href="{{ route('category.manage') }}">
+                <i class="fa-solid fa-tags me-2"></i>Kategori
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('order.manage') ? 'active' : '' }}"
+                href="{{ route('order.manage') }}">
+                <i class="fa-solid fa-file-invoice-dollar me-2"></i>Pesanan
+            </a>
+            <a class="role-sidebar-link {{ request()->routeIs('user.manage') ? 'active' : '' }}"
+                href="{{ route('user.manage') }}">
+                <i class="fa-solid fa-users me-2"></i>Pengguna
+            </a>
 
             <div class="text-glass-blue small fw-bold mb-2 px-2 mt-4 text-uppercase" style="letter-spacing: 1px;">Akun
             </div>
-            @if(Auth::user()->role === 'admin')
-                <a class="role-sidebar-link {{ request()->routeIs('admin.profile.*') ? 'active' : '' }}"
-                    href="{{ route('admin.profile.show') }}">
-                    <i class="fa-regular fa-id-badge me-2"></i>Profile
-                </a>
-            @else
-                <a class="role-sidebar-link {{ request()->routeIs('profile.edit') ? 'active' : '' }}"
-                    href="{{ route('profile.edit') }}">
-                    <i class="fa-regular fa-id-badge me-2"></i>Profile
-                </a>
-            @endif
+            <a class="role-sidebar-link {{ request()->routeIs('admin.profile.*') ? 'active' : '' }}"
+                href="{{ route('admin.profile.show') }}">
+                <i class="fa-regular fa-id-badge me-2"></i>Profile
+            </a>
 
             <div class="mt-auto pt-4 border-top border-light">
                 <div class="d-flex align-items-center mb-3 px-2">
@@ -443,6 +412,10 @@
                         <small class="text-glass-blue lh-1">{{ ucfirst(Auth::user()->role) }}</small>
                     </div>
                 </div>
+                <a href="{{ route('katalog.index') }}"
+                    class="btn btn-outline-primary w-100 mb-2 d-flex align-items-center justify-content-center">
+                    <i class="fa-solid fa-chevron-left me-2"></i> Katalog
+                </a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"

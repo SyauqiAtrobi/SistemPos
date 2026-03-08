@@ -70,9 +70,12 @@ class ProductController extends Controller
     /**
      * Menampilkan halaman Manajemen Produk untuk Admin
      */
-    public function manage()
+    public function manage(Request $request)
     {
-        $products = Product::with('category')->latest()->get();
+        $perPage = (int) $request->query('perPage', 10);
+        if (!in_array($perPage, [10,25,50,100])) $perPage = 10;
+
+        $products = Product::with('category')->latest()->paginate($perPage)->withQueryString();
         $categories = Category::all();
 
         return view('productmanagement', compact('products', 'categories'));
