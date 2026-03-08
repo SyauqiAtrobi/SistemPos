@@ -33,23 +33,14 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        // Mapping nama tab ke status database.
-        $map = [
-            'semua' => null,
-            'belum_bayar' => 'pending',
-            'dikemas' => 'processing',
-            'dikirim' => 'shipped',
-            'selesai' => 'paid',
-            'pengembalian' => 'returned',
-            'dibatalkan' => 'cancelled',
-        ];
-
         $tab = $request->query('tab', 'semua');
-        $status = $map[$tab] ?? null;
 
-        $query = Order::with(['items', 'payment'])->where('user_id', $user->id)->latest();
-        if ($status) {
-            $query->where('status', $status);
+        $query = Order::with(['items.product', 'payment'])->where('user_id', $user->id)->latest();
+
+        if ($tab === 'belum_bayar') {
+            $query->where('status', 'pending');
+        } elseif (in_array($tab, ['dikemas', 'dikirim', 'selesai', 'pengembalian', 'dibatalkan'])) {
+            $query->where('fulfillment_status', $tab);
         }
 
         $orders = $query->get();

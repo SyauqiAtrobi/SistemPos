@@ -393,6 +393,10 @@
                 href="{{ route('user.manage') }}">
                 <i class="fa-solid fa-users me-2"></i>Pengguna
             </a>
+            <a class="role-sidebar-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
+                href="{{ route('settings.index') }}">
+                <i class="fa-solid fa-gear me-2"></i><span class="sidebar-label">Setting</span>
+            </a>
 
             <div class="text-glass-blue small fw-bold mb-2 px-2 mt-4 text-uppercase" style="letter-spacing: 1px;">Akun
             </div>

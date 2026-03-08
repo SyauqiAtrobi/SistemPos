@@ -105,6 +105,10 @@
         transition: all 0.3s ease;
     }
     .btn-glass-cancel:hover { background: rgba(255, 255, 255, 0.9); border-color: #007bff; color: #0056b3; }
+
+    .price-cell {
+        color: var(--primary-blue) !important;
+    }
 </style>
 @endpush
 
@@ -146,7 +150,7 @@
                     <td>
                         <span class="badge badge-glass-category rounded-pill px-3">{{ $p->category->name ?? '-' }}</span>
                     </td>
-                    <td class="fw-bold text-gradient-blue">Rp {{ number_format($p->price, 0, ',', '.') }}</td>
+                    <td class="fw-bold price-cell">Rp {{ number_format($p->price, 0, ',', '.') }}</td>
                     <td>
                         @php
                             $stockClass = $p->stock > 10 ? 'badge-glass-success' : ($p->stock > 0 ? 'badge-glass-warning' : 'badge-glass-danger');
@@ -299,6 +303,7 @@
                             <label class="form-label text-glass-blue small fw-semibold ms-1">Kategori Aroma</label>
                             <select class="form-select custom-input-glass" name="category_id" id="inputCategory" required>
                                 <option value="">Pilih Kategori...</option>
+                                <option value="__add_new__">+ Tambah Kategori Baru...</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                 @endforeach
@@ -346,6 +351,42 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="quickCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0 align-items-center mt-2 mx-2">
+                <div class="d-flex align-items-center">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-3" style="width: 45px; height: 45px;">
+                        <i class="fa-solid fa-tags fs-5"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold text-gradient-blue mb-0">Tambah Kategori Baru</h5>
+                </div>
+                <button type="button" class="btn-close opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="quickCategoryForm" class="pt-2">
+                <div class="modal-body px-4 ms-2">
+                    <div class="mb-3">
+                        <label class="form-label text-glass-blue small fw-semibold ms-1">Nama Kategori</label>
+                        <input type="text" id="quickCategoryName" class="form-control custom-input-glass" placeholder="Contoh: Citrus" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-glass-blue small fw-semibold ms-1">Deskripsi</label>
+                        <textarea id="quickCategoryDescription" class="form-control custom-input-glass" rows="3" placeholder="Deskripsi singkat kategori (opsional)"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-2 pb-4 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-glass-cancel rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" id="quickCategorySaveBtn" class="btn btn-custom-primary rounded-pill px-4 shadow-sm">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Kategori
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endpush
 
 @push('scripts')
@@ -355,6 +396,12 @@
     const methodContainer = document.getElementById('methodContainer');
     const modalTitle = document.getElementById('modalTitle');
     const btnSubmit = document.getElementById('btnSubmit');
+    const categorySelect = document.getElementById('inputCategory');
+    const quickCategoryForm = document.getElementById('quickCategoryForm');
+    const quickCategoryName = document.getElementById('quickCategoryName');
+    const quickCategoryDescription = document.getElementById('quickCategoryDescription');
+    const quickCategorySaveBtn = document.getElementById('quickCategorySaveBtn');
+    const quickCategoryModal = new bootstrap.Modal(document.getElementById('quickCategoryModal'));
 
     // Fungsi membuka modal untuk TAMBAH data
     function openCreateModal() {
@@ -439,6 +486,84 @@
             // allow pressing Enter/Space when focused
             removeBtn.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+            });
+        }
+
+        if (categorySelect) {
+            categorySelect.dataset.prev = categorySelect.value || '';
+
+            categorySelect.addEventListener('change', function () {
+                if (this.value === '__add_new__') {
+                    const prev = this.dataset.prev || '';
+                    this.value = prev;
+                    quickCategoryName.value = '';
+                    quickCategoryDescription.value = '';
+                    quickCategoryModal.show();
+                    setTimeout(() => quickCategoryName.focus(), 150);
+                    return;
+                }
+
+                this.dataset.prev = this.value || '';
+            });
+        }
+
+        if (quickCategoryForm) {
+            quickCategoryForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                const name = (quickCategoryName.value || '').trim();
+                const description = (quickCategoryDescription.value || '').trim();
+                if (!name) {
+                    alert('Nama kategori wajib diisi.');
+                    quickCategoryName.focus();
+                    return;
+                }
+
+                const originalBtn = quickCategorySaveBtn.innerHTML;
+                quickCategorySaveBtn.disabled = true;
+                quickCategorySaveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...';
+
+                try {
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    const fd = new FormData();
+                    fd.append('name', name);
+                    fd.append('description', description);
+
+                    const res = await fetch("{{ route('category.store') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': token || '',
+                            'Accept': 'application/json'
+                        },
+                        body: fd
+                    });
+
+                    const json = await res.json();
+                    if (!res.ok || !json.success || !json.category) {
+                        const errMsg = json?.message || (json?.errors ? Object.values(json.errors).flat().join('\n') : 'Gagal menambahkan kategori.');
+                        throw new Error(errMsg);
+                    }
+
+                    const newId = String(json.category.id);
+                    const newName = json.category.name;
+                    let existing = Array.from(categorySelect.options).find(opt => opt.value === newId);
+
+                    if (!existing) {
+                        existing = document.createElement('option');
+                        existing.value = newId;
+                        existing.textContent = newName;
+                        categorySelect.appendChild(existing);
+                    }
+
+                    categorySelect.value = newId;
+                    categorySelect.dataset.prev = newId;
+                    quickCategoryModal.hide();
+                } catch (error) {
+                    alert(error.message || 'Terjadi kesalahan saat menambahkan kategori.');
+                } finally {
+                    quickCategorySaveBtn.disabled = false;
+                    quickCategorySaveBtn.innerHTML = originalBtn;
+                }
             });
         }
     })();

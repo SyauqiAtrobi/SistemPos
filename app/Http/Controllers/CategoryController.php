@@ -35,7 +35,18 @@ class CategoryController extends Controller
         // Generate slug URL secara otomatis dari nama kategori
         $validated['slug'] = Str::slug($validated['name']);
 
-        Category::create($validated);
+        $category = Category::create($validated);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ],
+            ]);
+        }
 
         return back()->with('success', 'Kategori aroma berhasil ditambahkan!');
     }

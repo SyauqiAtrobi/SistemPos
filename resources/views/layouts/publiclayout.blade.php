@@ -242,7 +242,7 @@
 
     @php
         // Kalkulasi jumlah keranjang untuk dipakai di Desktop maupun Mobile
-        $cartCount = (Auth::check() && Auth::user()->role === 'customer')
+        $cartCount = Auth::check()
             ? \App\Models\Cart::where('user_id', Auth::id())->sum('qty')
             : 0;
         $cartBadge = $cartCount > 99 ? '99+' : $cartCount;
@@ -265,6 +265,9 @@
                     <input id="desktopSearchInput" type="text" class="form-control rounded-pill search-desktop ps-3 pe-5" placeholder="Cari aroma parfum...">
                     <i class="fa-solid fa-magnifying-glass position-absolute top-50 end-0 translate-middle-y me-3 opacity-50"></i>
                 </div>
+                <a href="#" class="text-primary d-lg-none text-decoration-none" id="mobileSearchToggle" aria-label="Cari parfum">
+                    <i class="fa-solid fa-magnifying-glass fs-5"></i>
+                </a>
                 @endif
 
                 {{-- Orders page: show search for ordered products and hide cart --}}
@@ -278,14 +281,12 @@
                 </a>
                 @endif
 
-                @if(!request()->routeIs('cart.*') && !request()->routeIs('orders.index'))
+                @if(!request()->routeIs('orders.index'))
                 <a href="{{ route('cart.index') }}" id="cartIcon" class="text-primary position-relative text-decoration-none me-1 d-none d-lg-inline-block">
                     <i class="fa-solid fa-cart-shopping fs-5"></i>
-                    @if($cartCount > 0)
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm server-cart-badge" style="font-size: 0.65rem; padding: 0.25em 0.5em;">
-                            {{ $cartBadge }}
-                        </span>
-                    @endif
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm server-cart-badge {{ $cartCount > 0 ? '' : 'd-none' }}" style="font-size: 0.65rem; padding: 0.25em 0.5em;">
+                        {{ $cartCount > 0 ? $cartBadge : '' }}
+                    </span>
                 </a>
                 @endif
 
@@ -325,11 +326,9 @@
         <a href="{{ route('cart.index') }}" id="bottomCartIcon" class="bottom-nav-item position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}">
             <i class="fa-solid fa-basket-shopping"></i>
             <span>Keranjang</span>
-            @if($cartCount > 0)
-                <span class="position-absolute translate-middle badge rounded-pill bg-danger shadow-sm server-cart-badge" style="top:0; left: 60%; font-size: 0.65rem; padding: 0.25em 0.5em;">
-                    {{ $cartBadge }}
-                </span>
-            @endif
+            <span class="position-absolute translate-middle badge rounded-pill bg-danger shadow-sm server-cart-badge {{ $cartCount > 0 ? '' : 'd-none' }}" style="top:0; left: 60%; font-size: 0.65rem; padding: 0.25em 0.5em;">
+                {{ $cartCount > 0 ? $cartBadge : '' }}
+            </span>
         </a>
         
         <a href="{{ route('katalog.index') }}" class="bottom-nav-item bottom-nav-center">
@@ -440,26 +439,24 @@
 
             function upsertBadge(targetEl) {
                 if (!targetEl) return;
-                let guestBadge = targetEl.querySelector('.guest-cart-badge');
+                const badgeEl = targetEl.querySelector('.server-cart-badge');
+                if (!badgeEl) return;
+
                 if (totalQty > 0) {
-                    if (!guestBadge) {
-                        guestBadge = document.createElement('span');
-                        guestBadge.className = 'position-absolute start-100 translate-middle badge rounded-pill bg-danger shadow-sm guest-cart-badge';
-                        guestBadge.style.top = '0';
-                        if(targetEl === bottomCart) { guestBadge.style.left = '60%'; }
-                        guestBadge.style.fontSize = '0.65rem';
-                        guestBadge.style.padding = '0.25em 0.5em';
-                        targetEl.appendChild(guestBadge);
-                    }
-                    guestBadge.textContent = totalQty > 99 ? '99+' : totalQty;
-                } else if (guestBadge) {
-                    guestBadge.remove();
+                    badgeEl.textContent = totalQty > 99 ? '99+' : totalQty;
+                    badgeEl.classList.remove('d-none');
+                } else {
+                    badgeEl.textContent = '';
+                    badgeEl.classList.add('d-none');
                 }
             }
 
             upsertBadge(cartIcon);
             upsertBadge(bottomCart);
         }
+
+        // Expose so page-specific scripts (e.g. katalog) can refresh cart badge immediately.
+        window.updateGuestBadge = updateGuestBadge;
 
         function changeGuestQty(id, delta) {
             const cart = getGuestCart();
@@ -563,18 +560,9 @@
 
             // Show guest badge if not authenticated
             if (!isAuthenticatedClient) {
-                const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
-                const totalQty = guestCart.reduce((s,i)=>s + (parseInt(i.qty)||0), 0);
-
-                const serverBadge = cartIcon ? cartIcon.querySelector('.server-cart-badge') : null;
-                if (serverBadge) serverBadge.remove();
                 const bottomCart = document.getElementById('bottomCartIcon');
-                const serverBadgeBottom = bottomCart ? bottomCart.querySelector('.server-cart-badge') : null;
-                if (serverBadgeBottom) serverBadgeBottom.remove();
 
-                if (totalQty > 0) {
-                    updateGuestBadge();
-                }
+                updateGuestBadge();
 
                 [cartIcon, bottomCart].forEach(function(el) {
                     if (!el) return;
@@ -590,7 +578,7 @@
             }
             
             // Mobile search handling
-            const mobileSearchBtn = document.querySelector('.d-lg-none .fa-magnifying-glass') ? document.querySelector('.d-lg-none .fa-magnifying-glass').closest('a') : null;
+            const mobileSearchBtn = document.getElementById('mobileSearchToggle');
             const overlay = document.getElementById('mobileSearchOverlay');
             const input = document.getElementById('mobileSearchInput');
             const results = document.getElementById('mobileSearchResults');

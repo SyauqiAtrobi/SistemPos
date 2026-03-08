@@ -103,6 +103,25 @@
                             </small>
                         </div>
                     </div>
+
+                    @if($order->shipping_address)
+                    <div class="mt-4 p-3 rounded-3" style="background-color: var(--soft-white);">
+                        <h6 class="fw-bold">Alamat Pengiriman</h6>
+                        @php
+                            $sa = $order->shipping_address;
+                            if(is_string($sa)) { $sa = json_decode($sa, true); }
+                        @endphp
+                        <p class="mb-1">{{ $sa['label'] ?? '-' }}</p>
+                        <p class="mb-1">{{ $sa['address'] ?? '-' }} {{ $sa['city'] ?? '' }} {{ $sa['postal_code'] ?? '' }}</p>
+                        <p class="mb-1">Tel: {{ $sa['phone'] ?? '-' }}</p>
+                        @if(!empty($sa['lat']) && !empty($sa['lng']))
+                            <p class="mb-0">
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ $sa['lat'] }},{{ $sa['lng'] }}" target="_blank" class="btn btn-outline-primary btn-sm">Lihat Lokasi</a>
+                                <small class="text-muted ms-2">Koordinat: {{ $sa['lat'] }}, {{ $sa['lng'] }}</small>
+                            </p>
+                        @endif
+                    </div>
+                    @endif
                 </div>
 
                 <div class="col-12 col-md-6 order-1 order-md-2 text-center border-start border-light d-flex flex-column justify-content-center">
@@ -129,7 +148,7 @@
                             <div class="mb-3">
                                 <div class="text-muted small">Jika pengalihan otomatis tidak terjadi, klik tombol berikut:</div>
                                 <div class="mt-2">
-                                    <a id="pakasirOpenBtn" href="{{ $pakasirUrl }}" target="_blank" class="btn btn-custom-primary">Bayar Sekarang</a>
+                                    <a id="pakasirOpenBtn" href="{{ $pakasirUrl }}" class="btn btn-custom-primary">Bayar Sekarang</a>
                                 </div>
                             </div>
 
@@ -158,24 +177,6 @@
 @vite(['resources/js/app.js'])
 
 <script type="module">
-                    @if($order->shipping_address)
-                    <div class="mt-4 p-3 rounded-3" style="background-color: var(--soft-white);">
-                        <h6 class="fw-bold">Alamat Pengiriman</h6>
-                        @php
-                            $sa = $order->shipping_address;
-                            if(is_string($sa)) { $sa = json_decode($sa, true); }
-                        @endphp
-                        <p class="mb-1">{{ $sa['label'] ?? '-' }}</p>
-                        <p class="mb-1">{{ $sa['address'] ?? '-' }} {{ $sa['city'] ?? '' }} {{ $sa['postal_code'] ?? '' }}</p>
-                        <p class="mb-1">Tel: {{ $sa['phone'] ?? '-' }}</p>
-                        @if(!empty($sa['lat']) && !empty($sa['lng']))
-                            <p class="mb-0">
-                                <a href="https://www.google.com/maps/search/?api=1&query={{ $sa['lat'] }},{{ $sa['lng'] }}" target="_blank" class="btn btn-outline-primary btn-sm">Lihat Lokasi</a>
-                                <small class="text-muted ms-2">Koordinat: {{ $sa['lat'] }}, {{ $sa['lng'] }}</small>
-                            </p>
-                        @endif
-                    </div>
-                    @endif
     document.addEventListener('DOMContentLoaded', function () {
         const orderStatus = '{{ $order->status }}';
         const orderNumber = '{{ $order->order_number }}';

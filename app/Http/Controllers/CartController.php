@@ -85,4 +85,15 @@ class CartController extends Controller
 
         return redirect()->back()->with('success', 'Item dihapus dari keranjang.');
     }
+
+    // Return total cart quantity for authenticated user (AJAX)
+    public function count(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['totalQty' => 0]);
+        }
+
+        $totalQty = Cart::where('user_id', Auth::id())->sum('qty');
+        return response()->json(['totalQty' => $totalQty]);
+    }
 }
